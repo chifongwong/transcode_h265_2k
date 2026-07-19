@@ -38,16 +38,16 @@ if ! [[ "$width" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-# 2K 門檻（寬 2560）
-MAX_WIDTH=2560
+# 縮放門檻（寬 1280，手機串流甜蜜點 720p）
+MAX_WIDTH=1280
 
-# 組出縮放參數
+# 組出縮放參數：超過才縮，否則不縮放（陣列留空）
 scale_args=()
 if [ "$width" -gt "$MAX_WIDTH" ]; then
-  echo "來源寬度 ${width}px 超過 ${MAX_WIDTH}px，降回 2K"
+  echo "來源寬度 ${width}px 超過 ${MAX_WIDTH}px，降到寬 ${MAX_WIDTH}"
   scale_args=(-vf "scale=${MAX_WIDTH}:-2")
 else
-  echo "來源寬度 ${width}px，不需縮放"
+  echo "來源寬度 ${width}px，不需縮放，繼續轉碼"
 fi
 
 # 組出開始時間參數（放在 -i 之前，速度快且精準）
@@ -57,8 +57,9 @@ if [ -n "$start" ]; then
   seek_args=(-ss "$start")
 fi
 
-ffmpeg "${seek_args[@]}" -i "$input" \
-  "${scale_args[@]}" \
+# 注意：用 "${arr[@]+"${arr[@]}"}" 展開，空陣列在 set -u 下才不會報錯退出
+ffmpeg "${seek_args[@]+"${seek_args[@]}"}" -i "$input" \
+  "${scale_args[@]+"${scale_args[@]}"}" \
   -c:v libx264 -preset medium -crf 20 \
   -pix_fmt yuv420p \
   -c:a aac -b:a 192k \
